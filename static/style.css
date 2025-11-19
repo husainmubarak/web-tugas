@@ -1,0 +1,89 @@
+/* 🌌 GLOBAL STYLE */
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #001f3f, #003366, #004080);
+    color: white;
+    min-height: 100vh;
+    background-attachment: fixed;
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ✨ Header */
+header {
+    text-align: center;
+    margin-top: 50px;
+}
+
+header h1 {
+    font-size: 3em;
+    text-shadow: 0 0 20px rgba(255,255,255,0.2);
+}
+
+/* 💠 Card Container */
+.container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-top: 60px;
+}
+
+/* 🎴 Card Style */
+.card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2rem 3rem;
+    width: 250px;
+    text-align: center;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 15px 30px rgba(255,255,255,0.3);
+}
+
+/* 🔹 Subpage Style */
+section {
+    max-width: 800px;
+    background: rgba(255,255,255,0.08);
+    padding: 2rem 3rem;
+    border-radius: 20px;
+    margin-top: 50px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    line-height: 1.7;
+}
+
+/* 🌀 Headings in content pages */
+h2 {
+    border-bottom: 2px solid rgba(255,255,255,0.2);
+    padding-bottom: 5px;
+}
+
+h3 {
+    margin-top: 20px;
+    color: #A8C7FF;
+}
+
+/* 🌈 Link back */
+a.back {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: linear-gradient(90deg, #0059b3, #0099ff);
+    color: white;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: 0.3s;
+}
+a.back:hover {
+    background: linear-gradient(90deg, #0099ff, #0059b3);
+}
