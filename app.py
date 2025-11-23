@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import random
+import numpy as np
+import pandas as pd
+from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS untuk API
@@ -32,6 +35,10 @@ def genetika():
 @app.route('/tugas2')
 def tugas2():
     return render_template('tugas2.html')
+
+@app.route('/tugas3')
+def tugas3():
+    return render_template('tugas3.html')
 
 # ============================================
 # KNAPSACK GENETIC ALGORITHM - DATA & FUNGSI
@@ -213,6 +220,147 @@ def get_items():
     })
 
 # ============================================
+# TSP GENETIC ALGORITHM - FUNGSI
+# ============================================
+
+def route_distance_tsp(route, dist_matrix):
+    """Menghitung total jarak dari suatu rute TSP"""
+    d = sum(dist_matrix[route[i], route[(i + 1) % len(route)]] for i in range(len(route)))
+    return d
+
+def create_individual_tsp(n):
+    """Membuat individu (rute) acak sebagai permutasi dari n kota"""
+    ind = list(range(n))
+    random.shuffle(ind)
+    return ind
+
+def initial_population_tsp(size, n):
+    """Membuat populasi awal berisi 'size' individu"""
+    return [create_individual_tsp(n) for _ in range(size)]
+
+def tournament_selection_tsp(pop, dist_matrix, k):
+    """Seleksi turnamen"""
+    candidates = random.sample(pop, k)
+    return min(candidates, key=lambda ind: route_distance_tsp(ind, dist_matrix))
+
+def ordered_crossover_tsp(p1, p2):
+    """Ordered Crossover (OX)"""
+    n = len(p1)
+    a, b = sorted(random.sample(range(n), 2))
+    
+    child = [-1] * n
+    child[a:b+1] = p1[a:b+1]
+    
+    p2_idx = 0
+    for i in range(n):
+        if child[i] == -1:
+            while p2[p2_idx] in child:
+                p2_idx += 1
+            child[i] = p2[p2_idx]
+            p2_idx += 1
+            
+    return child
+
+def swap_mutation_tsp(ind):
+    """Swap Mutation"""
+    a, b = random.sample(range(len(ind)), 2)
+    ind[a], ind[b] = ind[b], ind[a]
+    return ind
+
+def run_tsp_ga(dist_matrix, cities, pop_size=100, generations=500, tournament_k=5, pc=0.9, pm=0.2, elite_size=1):
+    """Menjalankan TSP dengan Genetic Algorithm"""
+    n = len(cities)
+    
+    # Inisialisasi
+    pop = initial_population_tsp(pop_size, n)
+    best = min(pop, key=lambda ind: route_distance_tsp(ind, dist_matrix))
+    best_dist = route_distance_tsp(best, dist_matrix)
+    
+    history = []
+    
+    for g in range(generations):
+        new_pop = []
+        
+        # Elitisme
+        pop = sorted(pop, key=lambda ind: route_distance_tsp(ind, dist_matrix))
+        
+        if route_distance_tsp(pop[0], dist_matrix) < best_dist:
+            best = pop[0]
+            best_dist = route_distance_tsp(best, dist_matrix)
+        
+        new_pop.extend(pop[:elite_size])
+        
+        # Reproduksi
+        while len(new_pop) < pop_size:
+            p1 = tournament_selection_tsp(pop, dist_matrix, tournament_k)
+            p2 = tournament_selection_tsp(pop, dist_matrix, tournament_k)
+            
+            if random.random() < pc:
+                child = ordered_crossover_tsp(p1, p2)
+            else:
+                child = p1[:]
+                
+            if random.random() < pm:
+                child = swap_mutation_tsp(child)
+                
+            new_pop.append(child)
+        
+        pop = new_pop
+        history.append(best_dist)
+    
+    # Konversi rute ke nama kota
+    best_route = [cities[i] for i in best]
+    
+    return {
+        'best_route': best_route + [best_route[0]],  # Kembali ke kota awal
+        'best_distance': float(best_dist),
+        'history': history
+    }
+
+# ============================================
+# API ENDPOINTS UNTUK TSP
+# ============================================
+
+@app.route('/api/run_tsp', methods=['POST'])
+def run_tsp():
+    """Endpoint untuk menjalankan TSP-GA"""
+    try:
+        # Baca file Excel
+        file = request.files['file']
+        
+        # Read Excel file
+        df = pd.read_excel(BytesIO(file.read()), index_col=0)
+        cities = list(df.index)
+        dist_matrix = df.values.astype(float)
+        
+        # Get parameters
+        pop_size = int(request.form.get('pop_size', 100))
+        generations = int(request.form.get('generations', 500))
+        tournament_k = int(request.form.get('tournament_k', 5))
+        crossover_prob = float(request.form.get('crossover_prob', 0.9))
+        mutation_prob = float(request.form.get('mutation_prob', 0.2))
+        
+        # Set random seed untuk konsistensi
+        random.seed(42)
+        np.random.seed(42)
+        
+        # Jalankan TSP-GA
+        result = run_tsp_ga(
+            dist_matrix=dist_matrix,
+            cities=cities,
+            pop_size=pop_size,
+            generations=generations,
+            tournament_k=tournament_k,
+            pc=crossover_prob,
+            pm=mutation_prob
+        )
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
 # JALANKAN SERVER
 # ============================================
 
@@ -225,12 +373,14 @@ if __name__ == '__main__':
     print("   - GET  /              : Halaman Utama")
     print("   - GET  /tugas1        : Tugas 1")
     print("   - GET  /tugas2        : Knapsack GA")
+    print("   - GET  /tugas3        : TSP GA")
     print("   - GET  /jst           : JST")
     print("   - GET  /fuzzy         : Fuzzy")
     print("   - GET  /genetika      : Genetika")
     print("")
     print("📝 API Endpoints:")
-    print("   - POST /api/run_ga    : Jalankan algoritma genetika")
+    print("   - POST /api/run_ga    : Jalankan algoritma genetika (Knapsack)")
+    print("   - POST /api/run_tsp   : Jalankan algoritma TSP-GA")
     print("   - GET  /api/items     : Dapatkan data items")
     print("=" * 60)
     
