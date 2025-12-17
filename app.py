@@ -40,6 +40,10 @@ def tugas2():
 def tugas3():
     return render_template('tugas3.html')
 
+@app.route('/tugas4')
+def tugas4():
+    return render_template('tugas4.html')
+
 # ============================================
 # KNAPSACK GENETIC ALGORITHM - DATA & FUNGSI
 # ============================================
@@ -361,6 +365,99 @@ def run_tsp():
         return jsonify({'error': str(e)}), 500
 
 # ============================================
+# ANFIS - FUNGSI
+# ============================================
+
+def gdbell_mf(x, a, b, c):
+    """
+    Generalized Bell-Shaped Membership Function
+    mu(x) = 1 / (1 + |(x - c) / a|^(2b))
+    """
+    return 1 / (1 + np.abs((x - c) / a) ** (2 * b))
+
+def def1(x, y):
+    """Output Sugeno untuk Rule 1"""
+    return 0.1 * x + 0.1 * y + 0.1
+
+def def2(x, y):
+    """Output Sugeno untuk Rule 2"""
+    return 10 * x + 10 * y + 10
+
+# Parameter GDBell (a, b, c)
+A1_params = (1.5, 2.0, 1.0)  # Input x "kecil"
+B1_params = (2.0, 3.0, 0.5)  # Input y "rendah"
+A2_params = (1.5, 2.0, 5.0)  # Input x "besar"
+B2_params = (2.0, 3.0, 7.0)  # Input y "tinggi"
+
+def anfis_compute(x, y):
+    """
+    Melakukan inferensi ANFIS berdasarkan input x dan y
+    """
+    # Layer 1 - Fuzzifikasi
+    A1 = gdbell_mf(x, *A1_params)
+    B1 = gdbell_mf(y, *B1_params)
+    A2 = gdbell_mf(x, *A2_params)
+    B2 = gdbell_mf(y, *B2_params)
+    
+    # Layer 2 - Firing Strength
+    w1 = A1 * B1
+    w2 = A2 * B2
+    
+    # Layer 3 - Normalisasi
+    w_sum = w1 + w2
+    if w_sum == 0:
+        W1, W2 = 0, 0
+    else:
+        W1 = w1 / w_sum
+        W2 = w2 / w_sum
+    
+    # Layer 4 - Output Sugeno
+    f1 = def1(x, y)
+    f2 = def2(x, y)
+    
+    # Layer 5 - Weighted Output
+    out1 = W1 * f1
+    out2 = W2 * f2
+    
+    # Output Final
+    final_output = out1 + out2
+    
+    return {
+        'A1': float(A1),
+        'B1': float(B1),
+        'A2': float(A2),
+        'B2': float(B2),
+        'w1': float(w1),
+        'w2': float(w2),
+        'W1': float(W1),
+        'W2': float(W2),
+        'f1': float(f1),
+        'f2': float(f2),
+        'out1': float(out1),
+        'out2': float(out2),
+        'final_output': float(final_output)
+    }
+
+# ============================================
+# API ENDPOINTS UNTUK ANFIS
+# ============================================
+
+@app.route('/api/run_anfis', methods=['POST'])
+def run_anfis():
+    """Endpoint untuk menjalankan ANFIS"""
+    try:
+        data = request.get_json()
+        x = float(data.get('x'))
+        y = float(data.get('y'))
+        
+        result = anfis_compute(x, y)
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
 # JALANKAN SERVER
 # ============================================
 
@@ -384,7 +481,4 @@ if __name__ == '__main__':
     print("   - GET  /api/items     : Dapatkan data items")
     print("=" * 60)
     
-    # Gunakan PORT dari environment variable untuk Railway
-    import os
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True, port=5000)
